@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Création dessin</title>
+    <style type="text/css">
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #333;
+            color: white;
+            font-weight: bold;
+        }
+        td, th {
+            padding: 6px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+
+<label for="drawing-width">Longueur du dessin</label> <input id="drawing-width" type="number">
+
+<label for="drawing-height">Hauteur du dessin</label> <input id="drawing-height" type="number">
+
+
+<input id="submit-values" type="button" class="btn" value="Valider">
+<input id="enable-rubber" type="button" class="btn" value="Gomme">
+<a href="#" class="save-drawing">Sauvegarder</a>
+<div class="drawing"></div>
+
+<div class="drawing-color"></div>
+
+<p class="draw-json">
+
+</p>
+</body>
+<script type="application/javascript" src="node_modules/a-color-picker/dist/acolorpicker.js"></script>
+<script type="application/javascript" src="node_modules/jquery/dist/jquery.min.js"></script>
+<script type="application/javascript" src="scripts/save_drawing.js"></script>
+</html>
