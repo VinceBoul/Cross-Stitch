@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style type="text/css">
+        * {
+            box-sizing: border-box;
+        }
+        body, html{
+            margin: 0;
+            padding: 0;
+            color:white;
+        }
+
+        #ui{
+            position: absolute;
+            z-index: 2;
+            top: 0;
+            width: 0;
+            left: 0;
+            bottom: 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/4.8.1/pixi.min.js"></script>
+    <script>PIXI.utils.skipHello();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.10/lodash.min.js"></script>
+    <!-- Click two points to make cubes explode -->
+
+</head>
+<body>
+<div id="ui">
+    <button id="dig">
+        Dig 2k cubes
+    </button>
+    <button id="consume">
+        Consume 50 cubes
+    </button>
+    <p>
+        Total : <span id="total"></span>
+    </p>
+</div>
+<script type="application/javascript" src="scripts/cubes.js"></script>
+</body>
+</html>

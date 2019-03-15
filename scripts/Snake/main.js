@@ -1,51 +1,50 @@
 
-const lineStep = 1.5;
+let lineStep = 1.8;
 const pointSize = 10;
 
-var app = new PIXI.Application(800, 600);
-
-let renderer = app.renderer;
-let stage = new PIXI.Container();
-document.body.appendChild(app.renderer.view);
-
+var renderer = new PIXI.Renderer(800, 600, { backgroundColor: 0xfffff });
+document.body.appendChild(renderer.view);
+var stage = new PIXI.Container();
 let ticker = PIXI.Ticker.shared;
 
-let currentDrawing = getBoatDrawing();
-let pointsDrawing = [];
-let crossStitch;
 
-for (let i in currentDrawing.reverse()){
-    crossStitch = new CrossStitch();
-    crossStitch.begin(
-        currentDrawing[i].position.x*pointSize,
-        currentDrawing[i].position.y*pointSize,
-        currentDrawing[i].color.substring(1));
-    pointsDrawing.push(crossStitch);
-}
+let currentDrawing = getBoatDrawing();
+let pointsDrawing = getPointsToDraw();
 
 let currentCSIndex = 0;
 let currentCS;
 
-
 currentCS = pointsDrawing.pop();
 
 ticker.add(function() {
+    currentCS.draw();
 
-    if (currentCSIndex < currentDrawing.length){
+    if (currentCS.isFinished()){
+        currentCSIndex += 1;
+        currentCS = pointsDrawing.pop();
+    }
+
+    requestAnimationFrame(animate);
+});
+
+function animate() {
+    if (currentCSIndex < currentDrawing.length) {
 
         currentCS.draw();
 
-        if (currentCS.isFinished()){
+        if (currentCS.isFinished()) {
             currentCSIndex += 1;
             currentCS = pointsDrawing.pop();
         }
-
     }else{
         ticker.stop();
     }
+//    ticker.update(deltaFrame);
+
     renderer.render(stage);
 
-});
+}
+
 
 
 
@@ -90,23 +89,6 @@ function CrossStitch(){
         }
     };
 
-    this.prepareUndraw = function(){
-        this.prepared = true;
-        console.log(this.realPath2.x);
-        console.log(this.realPath2.y);
-        this.realPath2.lineTo(pointSize, pointSize);
-
-        lineToX = 0;
-        lineToY = 0;
-    };
-    this.undraw = function(){
-        lineToX += lineStep;
-        lineToY += lineStep;
-
-       this.realPath2.lineTo(lineToX, lineToY);
-
-    };
-
     this.begin = function(posX, posY, color){
         this.realPath2.x = posX;
         this.realPath2.y = posY;
@@ -129,6 +111,23 @@ function CrossStitch(){
         return this.prepared;
     };
 
+}
+
+function getPointsToDraw(){
+
+    let pointsDrawing = [];
+    let crossStitch;
+
+    for (let i in currentDrawing.reverse()){
+        crossStitch = new CrossStitch();
+        crossStitch.begin(
+            currentDrawing[i].position.x*pointSize,
+            currentDrawing[i].position.y*pointSize,
+            currentDrawing[i].color.substring(1));
+        pointsDrawing.push(crossStitch);
+    }
+
+    return pointsDrawing;
 }
 
 function getBoatDrawing(){
