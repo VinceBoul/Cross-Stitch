@@ -131,7 +131,7 @@ function CrossStitch(){
         this.realPath3.clear();
         this.realPath3.moveTo(this.posX, this.posX);
         this.realPath3.lineTo(pointSize, pointSize);
-        
+
         if (lineToY > 200 || lineToY < 0) this.over = true;
 
     };
