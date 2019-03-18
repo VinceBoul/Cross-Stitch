@@ -31,7 +31,7 @@ currentCS = pointsDrawing.pop();
 
 ticker.add(function() {
 
-    if (currentCSIndex < currentDrawing.length && !currentCS.isOver()){
+   // if (currentCSIndex < currentDrawing.length && !currentCS.isOver()){
 
 
         if (currentCS.isFinished()){
@@ -39,16 +39,18 @@ ticker.add(function() {
             if (!currentCS.isPrepared()) {
                 currentCS.prepareUndraw();
             }else {
+
+
                 currentCS.undraw();
+             //   console.log('undraw');
             }
             //currentCS = pointsDrawing.pop();
         }
         currentCS.draw();
 
 
-    }else{
+   if (currentCS.isReallyOver()){
         app.ticker.stop();
-
     }
 
     renderer.render(stage);
@@ -62,10 +64,11 @@ function CrossStitch(){
     let lineToX = 0;
     let lineToY = 0;
 
-    this.reversed = false;
-    this.finished = false;
-    this.prepared = false;
-    this.over = false;
+    this.step_two_over = false;
+    this.step_one_over = false;
+    this.step_undraw = false;
+    this.step_three_over = false;
+    this.step_four_over = false;
 
     this.posX = 0;
     this.posY = 0;
@@ -73,66 +76,104 @@ function CrossStitch(){
     this.realPath2 = new PIXI.Graphics();
     this.realPath1 = new PIXI.Graphics();
 
-    this.realPath3  = new PIXI.Graphics();
-
     this.draw = function(){
 
         if (!this.isPrepared()){
-            if (!this.reversed){
+            if (!this.step_two_over){
                 lineToX += lineStep;
                 lineToY += lineStep;
 
                 this.realPath2.moveTo(0, 0);
 
                 if (lineToX >= pointSize && lineToY >= pointSize){
-                    this.reversed = true;
+                    this.step_two_over = true;
                     this.realPath1.moveTo(pointSize, 0);
                     lineToX = pointSize;
                     lineToY = 0;
                 }
             }
-            if (this.reversed){
+            if (this.step_two_over){
                 this.realPath1.moveTo(lineToX, lineToY);
 
                 lineToX -= lineStep;
                 lineToY += lineStep;
 
-                this.finished = (lineToX <= 0);
+                this.step_one_over = (lineToX <= 0);
             }
 
             if (!this.isFinished()){
-                this.reversed ? this.realPath1.lineTo(lineToX, lineToY) : this.realPath2.lineTo(lineToX, lineToY);
+                this.step_two_over ? this.realPath1.lineTo(lineToX, lineToY) : this.realPath2.lineTo(lineToX, lineToY);
             }
         }
 
     };
 
     this.prepareUndraw = function(){
-        this.prepared = true;
-        this.realPath3 = this.realPath2;
-        stage.addChild(this.realPath3);
 
-        this.realPath2.clear();
-        this.realPath3.moveTo(pointSize, pointSize);
-        this.realPath3.lineTo(0, 0);
+        this.step_undraw = true;
+        //this.realPath3 = this.realPath2;
+       // stage.addChild(this.realPath2);
+
+        this.realPath2.lineTo(0, 0);
 
         this.posX = 0;
 
-        lineToX = this.realPath3.position.x;
-        lineToY = this.realPath3.position.y;
+        lineToX = this.realPath2.position.x;
+        lineToY = this.realPath2.position.y;
+    };
+
+
+    this.prepareStepFour = function(){
+
+        this.realPath1.lineTo(pointSize, 0);
+        this.realPath1.moveTo(0, pointSize);
+
+        this.posX = 50;
+        this.posY = 0;
     };
 
     this.undraw = function(){
-        lineToX += lineStep;
-        lineToY += lineStep;
+        if (!this.step_three_over){
 
-        this.posX += lineStep;
+            lineToX += lineStep;
+            lineToY += lineStep;
 
-        this.realPath3.clear();
-        this.realPath3.moveTo(this.posX, this.posX);
-        this.realPath3.lineTo(pointSize, pointSize);
+            this.posX += lineStep;
 
-        if (lineToY > 200 || lineToY < 0) this.over = true;
+            if (this.posX <= pointSize ){
+
+                this.realPath2.clear();
+                this.realPath2.moveTo(this.posX, this.posX);
+                this.realPath2.lineTo(pointSize, pointSize);
+
+            } else{
+
+                this.step_three_over = true;
+                this.realPath2.clear();
+                stage.removeChild(this.realPath2);
+
+                this.prepareStepFour();
+            }
+        }else{
+            this.posX -= lineStep;
+            this.posY += lineStep;
+
+            if (this.posY < pointSize ){
+                console.log('derniere étape');
+
+                this.realPath1.clear();
+                this.realPath1.moveTo(0, pointSize);
+                this.realPath1.lineTo(this.posX, this.posY);
+
+            } else{
+
+                this.step_four_over = true;
+                this.realPath1.clear();
+                stage.removeChild(this.realPath1);
+
+                this.step_four_over = true;
+            }
+        }
 
     };
 
@@ -153,16 +194,20 @@ function CrossStitch(){
     };
 
     this.isFinished = function(){
-        return this.finished;
+        return this.step_one_over;
     };
 
     this.isPrepared = function(){
-        return this.prepared;
+        return this.step_undraw;
     };
 
     this.isOver = function(){
-      return this.over;
+      return this.step_three_over;
     };
+
+    this.isReallyOver = function(){
+        return this.step_four_over;
+    }
 
 }
 
