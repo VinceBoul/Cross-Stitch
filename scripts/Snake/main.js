@@ -1,6 +1,6 @@
 
-const lineStep = 1.5;
-const pointSize = 10;
+const lineStep = 1;
+const pointSize = 50;
 
 var app = new PIXI.Application(800, 600);
 
@@ -10,7 +10,7 @@ document.body.appendChild(app.renderer.view);
 
 let ticker = PIXI.Ticker.shared;
 
-let currentDrawing = getBoatDrawing();
+let currentDrawing = getOnePoint();
 let pointsDrawing = [];
 let crossStitch;
 
@@ -31,18 +31,26 @@ currentCS = pointsDrawing.pop();
 
 ticker.add(function() {
 
-    if (currentCSIndex < currentDrawing.length){
+    if (currentCSIndex < currentDrawing.length && !currentCS.isOver()){
 
-        currentCS.draw();
 
         if (currentCS.isFinished()){
-            currentCSIndex += 1;
-            currentCS = pointsDrawing.pop();
+            //currentCSIndex += 1;
+            if (!currentCS.isPrepared()) {
+                currentCS.prepareUndraw();
+            }else {
+                currentCS.undraw();
+            }
+            //currentCS = pointsDrawing.pop();
         }
+        currentCS.draw();
+
 
     }else{
-        ticker.stop();
+        app.ticker.stop();
+
     }
+
     renderer.render(stage);
 
 });
@@ -57,57 +65,80 @@ function CrossStitch(){
     this.reversed = false;
     this.finished = false;
     this.prepared = false;
+    this.over = false;
+
+    this.posX = 0;
+    this.posY = 0;
 
     this.realPath2 = new PIXI.Graphics();
     this.realPath1 = new PIXI.Graphics();
 
+    this.realPath3  = new PIXI.Graphics();
+
     this.draw = function(){
 
-        if (!this.reversed){
-            lineToX += lineStep;
-            lineToY += lineStep;
+        if (!this.isPrepared()){
+            if (!this.reversed){
+                lineToX += lineStep;
+                lineToY += lineStep;
 
-            this.realPath2.moveTo(0, 0);
+                this.realPath2.moveTo(0, 0);
 
-            if (lineToX >= pointSize && lineToY >= pointSize){
-                this.reversed = true;
-                this.realPath1.moveTo(pointSize, 0);
-                lineToX = pointSize;
-                lineToY = 0;
+                if (lineToX >= pointSize && lineToY >= pointSize){
+                    this.reversed = true;
+                    this.realPath1.moveTo(pointSize, 0);
+                    lineToX = pointSize;
+                    lineToY = 0;
+                }
+            }
+            if (this.reversed){
+                this.realPath1.moveTo(lineToX, lineToY);
+
+                lineToX -= lineStep;
+                lineToY += lineStep;
+
+                this.finished = (lineToX <= 0);
+            }
+
+            if (!this.isFinished()){
+                this.reversed ? this.realPath1.lineTo(lineToX, lineToY) : this.realPath2.lineTo(lineToX, lineToY);
             }
         }
-        if (this.reversed){
-            this.realPath1.moveTo(lineToX, lineToY);
 
-            lineToX -= lineStep;
-            lineToY += lineStep;
-
-            this.finished = (lineToX <= 0);
-        }
-
-        if (!this.isFinished()){
-            this.reversed ? this.realPath1.lineTo(lineToX, lineToY) : this.realPath2.lineTo(lineToX, lineToY);
-        }
     };
 
     this.prepareUndraw = function(){
         this.prepared = true;
-        console.log(this.realPath2.x);
-        console.log(this.realPath2.y);
-        this.realPath2.lineTo(pointSize, pointSize);
+        this.realPath3 = this.realPath2;
+        stage.addChild(this.realPath3);
 
-        lineToX = 0;
-        lineToY = 0;
+        this.realPath2.clear();
+        this.realPath3.moveTo(pointSize, pointSize);
+        this.realPath3.lineTo(0, 0);
+
+        this.posX = 0;
+
+        lineToX = this.realPath3.position.x;
+        lineToY = this.realPath3.position.y;
     };
+
     this.undraw = function(){
         lineToX += lineStep;
         lineToY += lineStep;
 
-       this.realPath2.lineTo(lineToX, lineToY);
+        this.posX += lineStep;
+
+        this.realPath3.clear();
+        this.realPath3.moveTo(this.posX, this.posX);
+        this.realPath3.lineTo(pointSize, pointSize);
+        
+        if (lineToY > 200 || lineToY < 0) this.over = true;
 
     };
 
     this.begin = function(posX, posY, color){
+        this.posX = posX;
+        this.posY = posY;
         this.realPath2.x = posX;
         this.realPath2.y = posY;
 
@@ -129,6 +160,14 @@ function CrossStitch(){
         return this.prepared;
     };
 
+    this.isOver = function(){
+      return this.over;
+    };
+
+}
+
+function getOnePoint(){
+    return [{"color":"#c99959","position":{"x":"3","y":"3"}}];
 }
 
 function getBoatDrawing(){
