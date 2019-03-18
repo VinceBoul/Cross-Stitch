@@ -1,5 +1,5 @@
 
-const lineStep = 1.5;
+const lineStep = 1.6;
 const pointSize = 10;
 
 var app = new PIXI.Application(800, 600);
@@ -11,6 +11,7 @@ document.body.appendChild(app.renderer.view);
 let ticker = PIXI.Ticker.shared;
 
 let currentDrawing = getBoatDrawing();
+let unDrawing = getBoatDrawing();
 let pointsDrawing = [];
 let crossStitch;
 
@@ -28,107 +29,193 @@ let currentCS;
 
 
 currentCS = pointsDrawing.pop();
+let currentUndraw = unDrawing.pop();
 
+ticker.speed = 100;
+ticker.elapsedMS = 1;
 ticker.add(function() {
 
-    if (currentCSIndex < currentDrawing.length){
+    if (currentCSIndex < currentDrawing.length ){
 
-        currentCS.draw();
 
-        if (currentCS.isFinished()){
-            currentCSIndex += 1;
+        if (!currentCS.isDrawn()){
+            currentCS.newDraw();
+        }else{
             currentCS = pointsDrawing.pop();
+            console.log(currentCS);
+            currentCSIndex += 1;
         }
 
     }else{
-        ticker.stop();
+        app.ticker.stop();
     }
+
     renderer.render(stage);
 
 });
 
 
-
+/**
+ * Fil de Gauche à droite
+ * @constructor
+ */
 function CrossStitch(){
 
     let lineToX = 0;
     let lineToY = 0;
 
-    this.reversed = false;
-    this.finished = false;
-    this.prepared = false;
+    this.step_one_over = false;
+    this.step_two_over = false;
+    this.step_undraw = false;
+    this.step_three_over = false;
+    this.step_four_over = false;
 
-    this.realPath2 = new PIXI.Graphics();
-    this.realPath1 = new PIXI.Graphics();
+    this.posX = 0;
+    this.posY = 0;
 
-    this.draw = function(){
+    this.secondLine = new PIXI.Graphics();
+    this.firstLine = new PIXI.Graphics();
 
-        if (!this.reversed){
-            lineToX += lineStep;
-            lineToY += lineStep;
-
-            this.realPath2.moveTo(0, 0);
-
-            if (lineToX >= pointSize && lineToY >= pointSize){
-                this.reversed = true;
-                this.realPath1.moveTo(pointSize, 0);
-                lineToX = pointSize;
-                lineToY = 0;
-            }
+    this.newUndraw = function(){
+        if (this.step_undraw && this.step_two_over && !this.step_three_over){
+            this.undrawFirstLine();
         }
-        if (this.reversed){
-            this.realPath1.moveTo(lineToX, lineToY);
-
-            lineToX -= lineStep;
-            lineToY += lineStep;
-
-            this.finished = (lineToX <= 0);
-        }
-
-        if (!this.isFinished()){
-            this.reversed ? this.realPath1.lineTo(lineToX, lineToY) : this.realPath2.lineTo(lineToX, lineToY);
+        if (this.step_three_over){
+            this.undrawSecondLine();
         }
     };
 
-    this.prepareUndraw = function(){
-        this.prepared = true;
-        console.log(this.realPath2.x);
-        console.log(this.realPath2.y);
-        this.realPath2.lineTo(pointSize, pointSize);
+    this.newDraw = function(){
+        if (!this.step_one_over) this.drawFirstLine();
 
-        lineToX = 0;
-        lineToY = 0;
+        if (this.step_one_over && !this.step_two_over){
+            this.drawSecondLine();
+        }
+        if (this.step_two_over && !this.step_three_over && !this.step_undraw){
+            this.prepareUndraw();
+        }
     };
-    this.undraw = function(){
+
+    /**
+     * Fil la 1ère ligne
+     */
+    this.drawFirstLine = function(){
         lineToX += lineStep;
         lineToY += lineStep;
 
-       this.realPath2.lineTo(lineToX, lineToY);
+        this.firstLine.moveTo(0, 0);
 
+        // 1er Fil OK
+        if (lineToX >= pointSize && lineToY >= pointSize){
+            this.step_one_over = true;
+            this.secondLine.moveTo(pointSize, 0);
+            lineToX = pointSize;
+            lineToY = 0;
+        }
+
+        if (!this.step_one_over){
+            this.firstLine.lineTo(lineToX, lineToY);
+        }
+
+    };
+
+    /**
+     * Fil la 2ème ligne
+     */
+    this.drawSecondLine = function(){
+        this.secondLine.moveTo(lineToX, lineToY);
+
+        lineToX -= lineStep;
+        lineToY += lineStep;
+
+        this.step_two_over = (lineToX <= 0);
+
+        // 2è fil OK
+        if (!this.step_two_over){
+            this.secondLine.lineTo(lineToX, lineToY);
+        }
+    };
+
+
+    this.prepareUndraw = function(){
+
+        this.step_undraw = true;
+        this.firstLine.lineTo(0, 0);
+        this.posX = 0;
+    };
+
+    this.undrawFirstLine = function(){
+        this.posX += lineStep;
+
+        if (this.posX <= pointSize ){
+
+            this.firstLine.clear();
+            this.firstLine.moveTo(this.posX, this.posX);
+            this.firstLine.lineTo(pointSize, pointSize);
+
+        } else{
+
+            this.step_three_over = true;
+            this.firstLine.clear();
+            stage.removeChild(this.firstLine);
+
+            this.prepareStepFour();
+        }
+
+    };
+
+    this.undrawSecondLine = function(){
+        this.posX -= lineStep;
+        this.posY += lineStep;
+
+        if (this.posY < pointSize ){
+
+            this.secondLine.clear();
+            this.secondLine.moveTo(0, pointSize);
+            this.secondLine.lineTo(this.posX, this.posY);
+
+        } else{
+
+            this.step_four_over = true;
+            this.secondLine.clear();
+            stage.removeChild(this.secondLine);
+        }
+    };
+
+
+    this.prepareStepFour = function(){
+
+        this.secondLine.lineTo(pointSize, 0);
+        this.secondLine.moveTo(0, pointSize);
+
+        this.posX = pointSize;
+        this.posY = 0;
     };
 
     this.begin = function(posX, posY, color){
-        this.realPath2.x = posX;
-        this.realPath2.y = posY;
+        this.posX = posX;
+        this.posY = posY;
+        this.secondLine.x = posX;
+        this.secondLine.y = posY;
 
-        this.realPath2.lineStyle(4, PIXI.utils.string2hex(color), 1);
+        this.secondLine.lineStyle(4, PIXI.utils.string2hex(color), 1);
 
-        this.realPath1.x = posX;
-        this.realPath1.y = posY;
-        this.realPath1.lineStyle(4, PIXI.utils.string2hex(color), 1);
+        this.firstLine.x = posX;
+        this.firstLine.y = posY;
+        this.firstLine.lineStyle(4, PIXI.utils.string2hex(color), 1);
 
-        stage.addChild(this.realPath2);
-        stage.addChild(this.realPath1);
+        stage.addChild(this.secondLine);
+        stage.addChild(this.firstLine);
     };
 
-    this.isFinished = function(){
-        return this.finished;
-    };
+    this.isDrawn = function(){
+        return this.step_two_over;
+    }
 
-    this.isPrepared = function(){
-        return this.prepared;
-    };
+}
 
+function getOnePoint(){
+    return [{"color":"#c99959","position":{"x":"3","y":"3"}}];
 }
 
 function getBoatDrawing(){
