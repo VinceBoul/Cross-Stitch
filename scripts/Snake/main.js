@@ -1,59 +1,84 @@
-
-const lineStep = 1.6;
-const pointSize = 10;
-
-var app = new PIXI.Application(800, 600);
-
-let renderer = app.renderer;
 let stage = new PIXI.Container();
-document.body.appendChild(app.renderer.view);
+const lineStep = 1;
+const pointSize = 50;
 
-let ticker = PIXI.Ticker.shared;
+(function(){
 
-let currentDrawing = getBoatDrawing();
-let unDrawing = getBoatDrawing();
-let pointsDrawing = [];
-let crossStitch;
+    var app = new PIXI.Application(800, 600);
 
-for (let i in currentDrawing.reverse()){
-    crossStitch = new CrossStitch();
-    crossStitch.begin(
-        currentDrawing[i].position.x*pointSize,
-        currentDrawing[i].position.y*pointSize,
-        currentDrawing[i].color.substring(1));
-    pointsDrawing.push(crossStitch);
-}
+    let renderer = app.renderer;
+    document.body.appendChild(app.renderer.view);
 
-let currentCSIndex = 0;
-let currentCS;
+    let ticker = PIXI.Ticker.shared;
 
+    let currentDrawing = getOnePoint();
 
-currentCS = pointsDrawing.pop();
-let currentUndraw = unDrawing.pop();
+    let pointsDrawing = [];
+    let crossStitch;
 
-ticker.speed = 100;
-ticker.elapsedMS = 1;
-ticker.add(function() {
+    for (let i in currentDrawing.reverse()){
+        crossStitch = new CrossStitch();
+        crossStitch.begin(
+            currentDrawing[i].position.x*pointSize,
+            currentDrawing[i].position.y*pointSize,
+            currentDrawing[i].color.substring(1));
+        pointsDrawing.push(crossStitch);
+    }
 
-    if (currentCSIndex < currentDrawing.length ){
+    let currentCSIndex = 0;
+    let currentCS = pointsDrawing.pop();
 
+    ticker.add(function() {
+
+        //  if (currentCSIndex < currentDrawing.length ){
 
         if (!currentCS.isDrawn()){
             currentCS.newDraw();
         }else{
-            currentCS = pointsDrawing.pop();
-            console.log(currentCS);
-            currentCSIndex += 1;
+            currentCS.newUndraw();
         }
 
-    }else{
-        app.ticker.stop();
-    }
+        //}else{
+        // app.ticker.stop();
+        //}
 
-    renderer.render(stage);
+        renderer.render(stage);
 
-});
+    });
+})();
 
+function CrossStitchSprite(){
+    this.crossStitchs = [];
+}
+
+function Character(){
+    /**
+     *
+     * @type CrossStitchSprite[]
+     */
+    this.sprites = [];
+
+    /**
+     * @type CrossStitchSprite
+     */
+    this.currentSprite = null;
+
+    this.init = function(drawingType){
+
+    };
+
+    this.goToDirection = function(diretion){
+
+    };
+
+    this.savePointsFaceToRight = function(){
+
+    };
+
+    this.save = function(){
+
+    };
+}
 
 /**
  * Fil de Gauche à droite
@@ -70,12 +95,12 @@ function CrossStitch(){
     this.step_three_over = false;
     this.step_four_over = false;
 
-    this.posX = 0;
-    this.posY = 0;
-
     this.secondLine = new PIXI.Graphics();
     this.firstLine = new PIXI.Graphics();
 
+    /**
+     * Dé-fil
+     */
     this.newUndraw = function(){
         if (this.step_undraw && this.step_two_over && !this.step_three_over){
             this.undrawFirstLine();
@@ -85,6 +110,9 @@ function CrossStitch(){
         }
     };
 
+    /**
+     * Fil
+     */
     this.newDraw = function(){
         if (!this.step_one_over) this.drawFirstLine();
 
@@ -105,18 +133,15 @@ function CrossStitch(){
 
         this.firstLine.moveTo(0, 0);
 
-        // 1er Fil OK
-        if (lineToX >= pointSize && lineToY >= pointSize){
+        if (lineToX >= pointSize){
+            // 1er Fil OK
             this.step_one_over = true;
             this.secondLine.moveTo(pointSize, 0);
             lineToX = pointSize;
             lineToY = 0;
-        }
-
-        if (!this.step_one_over){
+        }else{
             this.firstLine.lineTo(lineToX, lineToY);
         }
-
     };
 
     /**
@@ -128,29 +153,34 @@ function CrossStitch(){
         lineToX -= lineStep;
         lineToY += lineStep;
 
-        this.step_two_over = (lineToX <= 0);
-
-        // 2è fil OK
-        if (!this.step_two_over){
+        if (lineToX > 0){
             this.secondLine.lineTo(lineToX, lineToY);
+        }else{
+            this.step_two_over = true;
         }
+
     };
 
-
+    /**
+     * Prépare le défilage
+     */
     this.prepareUndraw = function(){
 
         this.step_undraw = true;
         this.firstLine.lineTo(0, 0);
-        this.posX = 0;
+        lineToX = 0;
     };
 
+    /**
+     * Défile la 1ère ligne \
+     */
     this.undrawFirstLine = function(){
-        this.posX += lineStep;
+        lineToX += lineStep;
 
-        if (this.posX <= pointSize ){
+        if (lineToX <= pointSize ){
 
             this.firstLine.clear();
-            this.firstLine.moveTo(this.posX, this.posX);
+            this.firstLine.moveTo(lineToX, lineToX);
             this.firstLine.lineTo(pointSize, pointSize);
 
         } else{
@@ -164,15 +194,18 @@ function CrossStitch(){
 
     };
 
+    /**
+     * Défile la 2ème ligne /
+     */
     this.undrawSecondLine = function(){
-        this.posX -= lineStep;
-        this.posY += lineStep;
+        lineToX -= lineStep;
+        lineToY += lineStep;
 
-        if (this.posY < pointSize ){
+        if (lineToY < pointSize ){
 
             this.secondLine.clear();
             this.secondLine.moveTo(0, pointSize);
-            this.secondLine.lineTo(this.posX, this.posY);
+            this.secondLine.lineTo(lineToX, lineToY);
 
         } else{
 
@@ -182,22 +215,25 @@ function CrossStitch(){
         }
     };
 
-
     this.prepareStepFour = function(){
 
         this.secondLine.lineTo(pointSize, 0);
         this.secondLine.moveTo(0, pointSize);
 
-        this.posX = pointSize;
-        this.posY = 0;
+        lineToX = pointSize;
+        lineToY = 0;
     };
 
+    /**
+     * Initialise les deux lignes - Les ajoute au stage principal
+     * @param posX
+     * @param posY
+     * @param color
+     */
     this.begin = function(posX, posY, color){
-        this.posX = posX;
-        this.posY = posY;
+
         this.secondLine.x = posX;
         this.secondLine.y = posY;
-
         this.secondLine.lineStyle(4, PIXI.utils.string2hex(color), 1);
 
         this.firstLine.x = posX;
