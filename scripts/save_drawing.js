@@ -9,7 +9,7 @@ let enableRubber = false;
 
 $(function() {
 
-    tableCreate(55, 40);
+    tableCreate(55, 25);
     initColorPicker();
     initDrawingMouse();
     initSaveButton();
@@ -53,8 +53,6 @@ function initDrawingMouse(){
                 $( "td" ).mousemove(function( e ) {
 
                     $(this).css('background-color', drawingColor);
-                    console.log($(this).attr('posX'));
-                    console.log($(this).attr('posY'));
                 });
             }else{
                 $('td').unbind("mousemove");
@@ -75,21 +73,16 @@ function tableCreate(width, height) {
     tbl.width = '100%';
     tbl.attr('border', '1');
     var tbdy = $('<tbody>');
+
     for (var i = 0; i < height; i++) {
         var tr = document.createElement('tr');
-
         for (var j = 0; j < width; j++) {
 
-                let td = document.createElement('td');
+            let td = document.createElement('td');
 
-                // Ajoute les coordonnées en tant qu'attributs html
-                td.setAttribute('posX', j.toString());
-                td.setAttribute('posY', i.toString());
-                td.style.backgroundColor = whiteColor;
-
-
+            td.style.backgroundColor = whiteColor;
             td.append(document.createTextNode('\u0020'));
-                tr.appendChild(td);
+            tr.appendChild(td);
         }
         tbdy.append(tr);
     }
@@ -100,19 +93,40 @@ function tableCreate(width, height) {
 function getJsonFromTable() {
     let crossStitchArray = [];
     let jsonObject;
-    $('td').each(function(){
+    let posY = 0;
+    let posX = 0;
 
-        if (rgb2hex($(this).css('background-color')) !== whiteColor){
-            jsonObject = {
-                'color' : rgb2hex($(this).css('background-color')),
-                'position' : {
-                    'x' : $(this).attr('posX'),
-                    'y' : $(this).attr('posY'),
-                }
-            };
-            crossStitchArray.push(jsonObject);
+    let lineCellFound = false;
+
+    $('tr').each(function(){
+        posX = 0;
+        lineCellFound = false;
+
+        $(this).find('td').each(function() {
+
+            // Couleur détectée
+            if (rgb2hex($(this).css('background-color')) !== whiteColor) {
+                lineCellFound = true;
+                jsonObject = {
+                    'color' : rgb2hex($(this).css('background-color')),
+                    'position' : {
+                        'x' : posX,
+                        'y' : posY,
+                    }
+                };
+                crossStitchArray.push(jsonObject);
+                posX += 1;
+            }else if(lineCellFound){
+                posX += 1;
+            }
+        });
+
+        if (posX > 0){
+            posY += 1;
         }
+
     });
+
     $('.draw-json').html(JSON.stringify(crossStitchArray));
 
 }
