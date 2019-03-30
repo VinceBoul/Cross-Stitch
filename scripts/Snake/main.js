@@ -1,23 +1,38 @@
-let stage = new PIXI.Container();
 
-stage.position.x = 50;
-stage.position.y = 50;
-
-const lineStep = 2.99;
+const lineStep = 1;
 const pointSize = 10;
 
-(function(){
+let app;
+let container;
 
-    var app = new PIXI.Application(800, 600);
+initApp();
 
-    let renderer = app.renderer;
-    document.body.appendChild(app.renderer.view);
+initKeyControl();
 
-    let ticker = PIXI.Ticker.shared;
+initRenderer();
 
-    let currentDrawing = getHeart();
+/**
+ * Initialise l'application
+ */
+function initApp(){
+    app = new PIXI.Application(800, 600);
+    app.ticker.autoStart = false;
+    container = new PIXI.Container();
+    container.position.x = 50;
+    container.position.y = 50;
 
-    let pointsDrawing = [];
+    app.stage.addChild(container);
+
+    document.body.appendChild(app.view);
+
+}
+
+/**
+ * Initialise la création d'un dessin
+ */
+function initRenderer(){
+    let currentDrawing = getBoatDrawing();
+
     let crossStitch;
 
     for (let i in currentDrawing.reverse()){
@@ -26,64 +41,25 @@ const pointSize = 10;
             currentDrawing[i].position.x*pointSize,
             currentDrawing[i].position.y*pointSize,
             currentDrawing[i].color.substring(1));
-        pointsDrawing.push(crossStitch);
+        crossStitch.addToTicker();
     }
+}
 
-    let currentCSIndex = 0;
-    let currentCS = pointsDrawing.pop();
-
-    ticker.add(function() {
-
-          if (currentCSIndex < currentDrawing.length ){
-
-        if (!currentCS.isDrawn()){
-            currentCS.newDraw();
-        }else{
-            currentCS = pointsDrawing.pop();
-            currentCSIndex += 1;
+/**
+ * Initialise les controles clavier
+ * ENTER : Démarrer le ticker
+ * SHIFT : Mettre en pause le ticker
+ */
+function initKeyControl(){
+    $('body').keyup(function (event) {
+        if ( event.which === 16 ) {
+            app.ticker.stop();
+        }else if(event.which === 13){
+            app.ticker.start();
         }
-
-        }else{
-              app.ticker.stop();
-        }
-
-        renderer.render(stage);
-
     });
-})();
-
-function CrossStitchSprite(){
-    this.crossStitchs = [];
 }
 
-function Character(){
-    /**
-     *
-     * @type CrossStitchSprite[]
-     */
-    this.sprites = [];
-
-    /**
-     * @type CrossStitchSprite
-     */
-    this.currentSprite = null;
-
-    this.init = function(drawingType){
-
-    };
-
-    this.goToDirection = function(diretion){
-
-    };
-
-    this.savePointsFaceToRight = function(){
-
-    };
-
-    this.save = function(){
-
-    };
-}
 
 /**
  * Fil de Gauche à droite
@@ -100,7 +76,16 @@ function CrossStitch(){
     this.step_three_over = false;
     this.step_four_over = false;
 
+    /**
+     *
+     * @type {PIXI.Graphics}
+     */
     this.secondLine = new PIXI.Graphics();
+
+    /**
+     *
+     * @type {PIXI.Graphics}
+     */
     this.firstLine = new PIXI.Graphics();
 
     /**
@@ -113,6 +98,20 @@ function CrossStitch(){
         if (this.step_three_over){
             this.undrawSecondLine();
         }
+    };
+
+    /**
+     * Initialise l'animation de dessin d'un point de croix
+     */
+    this.addToTicker = function(){
+        let that = this;
+        app.ticker.add(function(){
+            if (!that.isDrawn()){
+                that.newDraw();
+            }else{
+                app.ticker.stop();
+            }
+        });
     };
 
     /**
@@ -134,18 +133,14 @@ function CrossStitch(){
      */
     this.drawFirstLine = function(){
         lineToX += lineStep;
-        lineToY += lineStep;
-
-        this.firstLine.moveTo(0, 0);
 
         if (lineToX >= pointSize){
             // 1er Fil OK
             this.step_one_over = true;
-            this.secondLine.moveTo(pointSize, 0);
             lineToX = pointSize;
             lineToY = 0;
         }else{
-            this.firstLine.lineTo(lineToX, lineToY);
+            this.firstLine.lineTo(lineToX, lineToX);
         }
     };
 
@@ -153,13 +148,14 @@ function CrossStitch(){
      * Fil la 2ème ligne
      */
     this.drawSecondLine = function(){
-        this.secondLine.moveTo(lineToX, lineToY);
 
+        this.secondLine.moveTo(lineToX, lineToY);
         lineToX -= lineStep;
         lineToY += lineStep;
 
         if (lineToX > 0){
             this.secondLine.lineTo(lineToX, lineToY);
+
         }else{
             this.step_two_over = true;
         }
@@ -192,7 +188,7 @@ function CrossStitch(){
 
             this.step_three_over = true;
             this.firstLine.clear();
-            stage.removeChild(this.firstLine);
+            app.stage.removeChild(this.firstLine);
 
             this.prepareStepFour();
         }
@@ -216,7 +212,7 @@ function CrossStitch(){
 
             this.step_four_over = true;
             this.secondLine.clear();
-            stage.removeChild(this.secondLine);
+            app.stage.removeChild(this.secondLine);
         }
     };
 
@@ -245,8 +241,9 @@ function CrossStitch(){
         this.firstLine.y = posY;
         this.firstLine.lineStyle(4, PIXI.utils.string2hex(color), 1);
 
-        stage.addChild(this.secondLine);
-        stage.addChild(this.firstLine);
+        container.addChild(this.firstLine);
+        container.addChild(this.secondLine);
+
     };
 
     this.isDrawn = function(){
